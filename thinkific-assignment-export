@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Thinkific Assignment Exporter!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --bg:#2b1633; --card:#2a1732; --ink:#f7f2ec; --muted:#d6c8bf; --accent:#f2c234; --accent2:#f4d45e; --border:#3a2241; --thinkific:#24111f }
+    body { margin:0; padding:24px; background:
+      radial-gradient(1100px 600px at 10% 20%, rgba(255,255,255,.08), transparent 60%),
+      radial-gradient(900px 500px at 90% 30%, rgba(244,212,94,.12), transparent 55%),
+      linear-gradient(180deg, #2b1633 0%, #24112c 100%);
+      color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .wrap { max-width:none; margin:0 auto; width:max-content; min-width:900px }
+    .card { background:linear-gradient(180deg, #2b1633, #24112c); border:1px solid var(--border); border-radius:20px; padding:24px; box-shadow:0 18px 44px rgba(0,0,0,.45) }
+    h1 { margin:.2em 0 .35em; font-size:2.1rem; font-family: Georgia, "Times New Roman", Times, serif; letter-spacing:.2px }
+    .muted { color:var(--muted); font-size:.95rem }
+    .brand { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px }
+    .brand-left { display:flex; align-items:center; gap:12px }
+    .brand-name { font-weight:700; font-size:1.05rem; color:var(--ink) }
+    .brand-tag { font-size:.8rem; color:var(--muted) }
+    .brand-link { color:var(--ink); text-decoration:none; font-size:.85rem; border:1px solid rgba(247,242,236,.5); padding:6px 12px; border-radius:999px }
+    .brand-link:hover { background:rgba(247,242,236,.1) }
+    label { display:block; margin-top:12px; font-size:.95rem; color:#cbd5e1 }
+    .token-save { display:flex; gap:8px; align-items:center; margin-top:6px }
+    .token-save input { flex:1 }
+    .token-save button { flex:0 0 auto; padding:10px 14px; font-size:.95rem }
+    input, textarea, select { width:100%; padding:10px 12px; border-radius:12px; border:1px solid #263249; background:#0a1220; color:var(--ink) }
+    textarea { min-height:84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .row { display:flex; gap:12px; align-items:flex-end }
+    .row > * { flex:1 }
+    .btns { display:flex; gap:12px; margin-top:16px }
+    button { flex:1; padding:12px 16px; border-radius:999px; border:0; background:var(--accent); color:#2b1633; font-weight:700; font-size:1rem; cursor:pointer }
+    button.secondary { background:transparent; border:1px solid rgba(247,242,236,.6); color:var(--ink) }
+    button:disabled { opacity:.6; cursor:not-allowed }
+    .progress { position:relative; margin-top:14px; height:12px; background:#0a1220; border:1px solid #263249; border-radius:999px; overflow:hidden }
+    .bar { position:absolute; inset:0; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition:width .2s linear }
+    .bar.indeterminate::before { content:""; position:absolute; left:-40%; top:0; width:40%; height:100%; background:linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); animation: slide 1.1s infinite }
+    @keyframes slide { 0% { left:-40% } 100% { left:100% } }
+    .status { margin-top:8px; font-size:.9rem; color:#cbd5e1 }
+    .log { margin-top:12px; background:#0a1220; border:1px solid #263249; border-radius:12px; padding:10px; font-size:.85rem; max-height:200px; overflow:auto; white-space:pre-wrap }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #263249; font-size:.75rem; color:#cbd5e1 }
+    .right { text-align:right }
+    .table-resize { margin-top:16px; border:1px solid #263249; border-radius:14px; background:#0a1220; overflow:hidden; min-height:240px; width:1500px; padding:0 20px 20px 0; position:relative }
+    .table-resize-handle { position:absolute; right:6px; bottom:6px; width:18px; height:18px; cursor:se-resize; }
+    .table-resize-handle::after { content:""; position:absolute; right:2px; bottom:2px; width:12px; height:12px; border-right:2px solid rgba(203,213,225,.6); border-bottom:2px solid rgba(203,213,225,.6); }
+    .table-wrap { display:flex; flex-direction:column; height:100%; overflow:hidden; margin:0 -20px -20px 0 }
+    .table-toolbar { display:flex; gap:12px; align-items:center; padding:10px 12px; border-bottom:1px solid #263249; background:rgba(15,23,42,.6) }
+    .table-toolbar .muted { font-size:.85rem }
+    .table-toolbar button { flex:0 0 auto; padding:8px 12px; font-size:.85rem; border-radius:10px }
+    table { width:100%; border-collapse:collapse; font-size:.9rem; table-layout:auto }
+    th, td { padding:8px 10px; border-bottom:1px solid #1f2a3e; vertical-align:top; white-space:nowrap }
+    th { background:#0b1324; position:sticky; top:0; z-index:1; text-align:left }
+    th.dragging { opacity:.6 }
+    th .col-label { display:flex; align-items:center; gap:8px; cursor:grab }
+    th .col-label span { font-weight:600 }
+    .filter-wrap { margin-top:6px; display:flex; align-items:center; gap:6px }
+    details.filter { position:relative }
+    details.filter summary { list-style:none; cursor:pointer; font-size:.75rem; color:#cbd5e1; border:1px solid #1f2a3e; padding:4px 8px; border-radius:8px; background:#0b1324 }
+    details.filter summary::-webkit-details-marker { display:none }
+    .filter-popover { position:absolute; top:28px; left:0; z-index:5; background:#0b1324; border:1px solid #1f2a3e; border-radius:10px; padding:8px; min-width:220px; max-width:320px; max-height:260px; overflow:auto; box-shadow:0 10px 24px rgba(0,0,0,.35) }
+    .filter-actions { display:flex; gap:6px; margin-bottom:8px }
+    .filter-actions button { flex:1; padding:6px 8px; font-size:.72rem; border-radius:8px; border:1px solid #1f2a3e; background:#0a1220; color:#cbd5e1; cursor:pointer }
+    .filter-option { display:flex; align-items:center; gap:6px; font-size:.78rem; padding:2px 0 }
+    .filter-option input { width:auto }
+    .status-cell { display:flex; flex-direction:column; gap:6px }
+    .status-pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #263249; font-size:.75rem }
+    .status-controls { display:flex; gap:6px; align-items:center }
+    .status-controls select { width:auto; padding:6px 8px; border-radius:8px; border:1px solid #263249; background:#0a1220; color:var(--ink); font-size:.8rem }
+    .status-controls input { width:220px; padding:6px 8px; border-radius:8px; border:1px solid #263249; background:#0a1220; color:var(--ink); font-size:.8rem }
+    .status-controls button { padding:6px 10px; font-size:.8rem; border-radius:8px; border:0; background:var(--accent); color:#2b1633; font-weight:700; cursor:pointer }
+    .status-controls button:disabled { opacity:.6; cursor:not-allowed }
+    .table-scroll { flex:1; min-height:200px; overflow:auto }
+    .empty { padding:14px; color:var(--muted); font-size:.9rem }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="brand">
+        <div class="brand-left">
+          <div>
+            <div class="brand-name">Thinkific</div>
+            <div class="brand-tag">Assignment Exporter</div>
+          </div>
+        </div>
+        <a class="brand-link" href="https://www.thinkific.com/" target="_blank" rel="noreferrer">thinkific.com</a>
+      </div>
+      <h1>Assignment Exporter</h1>
+      <div class="muted">Looks up a user by email, then exports assignment submissions (course + lesson + submission details) to CSV. Downloads to your browser's default download location.</div>
+
+      <div class="row">
+        <label>GraphQL Endpoint
+          <input id="endpoint" value="https://api.thinkific.com/stable/graphql">
+        </label>
+        <label>Output File
+          <input id="outfile" value="thinkific-assignment-submissions.csv">
+        </label>
+      </div>
+
+      <label>Bearer Token (saved on this device)
+        <div class="token-save">
+          <input id="token" value="add access token here!">
+          <button id="save-token" type="button" class="secondary">Save API Key</button>
+        </div>
+      </label>
+
+      <label>User Email
+        <input id="user-email" placeholder="name@company.com">
+      </label>
+
+      <div class="btns">
+        <button id="start">Generate Report</button>
+        <button id="download" class="secondary" disabled>Download CSV</button>
+      </div>
+
+      <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
+      <div id="status" class="status">Idle</div>
+      <div id="log" class="log"></div>
+
+      <div class="table-resize" id="table-resize">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="muted" id="table-meta">No results yet.</div>
+            <div style="flex:1"></div>
+            <button id="reset-columns" type="button" class="secondary" disabled>Reset Columns</button>
+          </div>
+          <div class="table-scroll">
+            <table id="results-table" aria-live="polite"></table>
+          </div>
+          <div id="table-empty" class="empty">Run an export to see results.</div>
+        </div>
+        <div class="table-resize-handle" id="table-resize-handle" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = s => document.querySelector(s);
+const log = (m) => ( document.querySelector("#log").textContent += ( document.querySelector("#log").textContent ? "\n" : "" ) + m, document.querySelector("#log").scrollTop = document.querySelector("#log").scrollHeight );
+const setStatus = (t) => document.querySelector("#status").textContent = t;
+const setBar = (pct) => { const b = document.querySelector("#bar"); b.classList.remove("indeterminate"); b.style.width = Math.max(0,Math.min(100,pct)) + "%"; };
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const ASSIGNMENTS_PAGE_SIZE = 100;
+
+const QUERY_USER_BY_EMAIL = `query UserByEmail($email: EmailAddress!) {
+  userByEmail(email: $email) {
+    id
+  }
+}`;
+
+const QUERY_ASSIGNMENT_SUBMISSIONS = `query SiteAssignments($after: String, $userId: ID!) {
+  site {
+    assignmentSubmissions(first: ${ASSIGNMENTS_PAGE_SIZE}, after: $after, filter: { userIds: [$userId] }) {
+      nodes {
+        id
+        createdAt
+        reviewedAt
+        status
+        user {
+          id
+          email
+          firstName
+          lastName
+        }
+        file {
+          url
+        }
+        course { name }
+        assignment {
+          updatedAt
+          lesson {
+            id
+            title
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}`;
+
+const MUTATION_UPDATE_ASSIGNMENT_STATUS = `mutation UpdateAssignmentSubmissionStatus($submissionId: ID!, $message: String, $status: AssignmentSubmissionStatus!) {
+  updateAssignmentSubmissionStatus(input: { submissionId: $submissionId, message: $message, status: $status }) {
+    __typename
+  }
+}`;
+
+function attachRateLimit(err, payload) {
+  if (payload && payload.extensions && payload.extensions.rateLimit) {
+    err.rateLimit = payload.extensions.rateLimit;
+  }
+}
+
+async function gql(endpoint, token, query, variables) {
+  const resp = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({ query, variables })
+  });
+
+  let json;
+  try {
+    json = await resp.json();
+  } catch (parseErr) {
+    if (!resp.ok) {
+      const err = new Error("HTTP " + resp.status + " - " + resp.statusText);
+      err.status = resp.status;
+      throw err;
+    }
+    throw new Error("Invalid JSON response.");
+  }
+
+  if (!resp.ok) {
+    const err = new Error("HTTP " + resp.status + " - " + resp.statusText);
+    err.status = resp.status;
+    err.body = json;
+    attachRateLimit(err, json);
+    throw err;
+  }
+
+  if (json.errors) {
+    const msg = json.errors.map(e => e.message).join("; ");
+    const err = new Error("GraphQL error: " + msg);
+    err.graphQLErrors = json.errors;
+    const code = json.errors.find(e => e.extensions && e.extensions.code)?.extensions.code;
+    if (code) err.code = code;
+    attachRateLimit(err, json);
+    throw err;
+  }
+
+  return json.data;
+}
+
+function isRateLimitError(err) {
+  if (!err) return false;
+  if (err.code === "RATE_LIMITED") return true;
+  if (Array.isArray(err.graphQLErrors)) {
+    return err.graphQLErrors.some(e => e.extensions && e.extensions.code === "RATE_LIMITED");
+  }
+  return typeof err.message === "string" && err.message.toLowerCase().includes("rate limit");
+}
+
+function getRateLimitWait(err) {
+  const fallbackMs = 60 * 1000;
+  const rl = err && err.rateLimit;
+  if (rl && rl.resetAt) {
+    const resetAtMs = new Date(rl.resetAt).getTime();
+    if (Number.isFinite(resetAtMs)) {
+      const diff = resetAtMs - Date.now();
+      if (diff > 0) {
+        return {
+          waitMs: Math.min(diff, 5 * 60 * 1000),
+          resetAt: rl.resetAt
+        };
+      }
+    }
+  }
+  return { waitMs: fallbackMs, resetAt: rl && rl.resetAt };
+}
+
+function csvEscape(value) {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+function toCSV(rows, order) {
+  const ids = Array.isArray(order) && order.length ? order : COLUMN_DEFS.map(c => c.id);
+  const cols = ids.map(id => getColumnById(id)).filter(Boolean);
+  const header = cols.map(c => c.id);
+  const lines = [header.map(csvEscape).join(",")];
+  for (const r of rows) {
+    const line = cols.map(c => c.get(r)).map(csvEscape).join(",");
+    lines.push(line);
+  }
+  return lines.join("\n");
+}
+
+const COLUMN_DEFS = [
+  { id: "assignmentSubmissionId", label: "Submission ID", get: r => r.assignmentSubmissionId },
+  { id: "courseName", label: "Course", get: r => r.courseName },
+  { id: "lessonId", label: "Lesson ID", get: r => r.lessonId },
+  { id: "lessonTitle", label: "Lesson Title", get: r => r.lessonTitle },
+  { id: "submissionCreatedAt", label: "Submitted At", get: r => r.submissionCreatedAt },
+  { id: "submissionReviewedAt", label: "Reviewed At", get: r => r.submissionReviewedAt },
+  { id: "submissionStatus", label: "Status", get: r => r.submissionStatus },
+  { id: "submissionFileUrl", label: "File URL", get: r => r.submissionFileUrl },
+  { id: "userId", label: "User ID", get: r => r.userId },
+  { id: "userEmail", label: "Email", get: r => r.userEmail },
+  { id: "userFirstName", label: "First Name", get: r => r.userFirstName },
+  { id: "userLastName", label: "Last Name", get: r => r.userLastName }
+];
+
+let tableRows = [];
+const COLUMN_ORDER_KEY = "thinkific-assignment-export-column-order";
+let columnOrder = COLUMN_DEFS.map(c => c.id);
+const filters = {};
+const pendingDecisions = {};
+const pendingMessages = {};
+const pendingSubmitting = {};
+
+function getColumnById(id) {
+  return COLUMN_DEFS.find(c => c.id === id);
+}
+
+function loadColumnOrder() {
+  const saved = localStorage.getItem(COLUMN_ORDER_KEY);
+  if (!saved) return;
+  try {
+    const parsed = JSON.parse(saved);
+    const ids = new Set(COLUMN_DEFS.map(c => c.id));
+    if (!Array.isArray(parsed)) return;
+    const next = parsed.filter(id => ids.has(id));
+    for (const id of ids) {
+      if (!next.includes(id)) next.push(id);
+    }
+    columnOrder = next;
+  } catch {
+    // ignore invalid stored value
+  }
+}
+
+function saveColumnOrder() {
+  localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(columnOrder));
+}
+
+function resetColumns() {
+  columnOrder = COLUMN_DEFS.map(c => c.id);
+  saveColumnOrder();
+  renderTable();
+}
+
+function applyFilters(rows) {
+  const activeFilters = Object.entries(filters).filter(([, value]) => value instanceof Set);
+  if (activeFilters.length === 0) return rows;
+  return rows.filter(row => {
+    return activeFilters.every(([colId, value]) => {
+      const col = getColumnById(colId);
+      if (!col) return true;
+      const cell = col.get(row);
+      const set = value;
+      if (!set || set.size === 0) return false;
+      return set.has(String(cell || ""));
+    });
+  });
+}
+
+function renderTable() {
+  const table = document.querySelector("#results-table");
+  const empty = document.querySelector("#table-empty");
+  const meta = document.querySelector("#table-meta");
+  table.innerHTML = "";
+
+  if (!tableRows.length) {
+    empty.style.display = "block";
+    meta.textContent = "No results yet.";
+    return;
+  }
+
+  const filtered = applyFilters(tableRows);
+  meta.textContent = filtered.length + " of " + tableRows.length + " rows";
+  empty.style.display = filtered.length ? "none" : "block";
+  empty.textContent = filtered.length ? "" : "No results match your filters.";
+
+  const colgroup = document.createElement("colgroup");
+  const columnWidths = computeColumnWidths(filtered);
+  for (const colId of columnOrder) {
+    const col = getColumnById(colId);
+    if (!col) continue;
+    const colEl = document.createElement("col");
+    const width = columnWidths[colId];
+    if (width) colEl.style.width = width;
+    colgroup.appendChild(colEl);
+  }
+  table.appendChild(colgroup);
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  for (const colId of columnOrder) {
+    const col = getColumnById(colId);
+    if (!col) continue;
+    const th = document.createElement("th");
+    th.setAttribute("draggable", "true");
+    th.dataset.colId = colId;
+
+    const label = document.createElement("div");
+    label.className = "col-label";
+    const text = document.createElement("span");
+    text.textContent = col.label;
+    label.appendChild(text);
+    th.appendChild(label);
+
+    const filterWrap = document.createElement("div");
+    filterWrap.className = "filter-wrap";
+    const details = document.createElement("details");
+    details.className = "filter";
+    const summary = document.createElement("summary");
+    summary.textContent = "Filter";
+    details.appendChild(summary);
+
+    const pop = document.createElement("div");
+    pop.className = "filter-popover";
+    const actions = document.createElement("div");
+    actions.className = "filter-actions";
+    const btnAll = document.createElement("button");
+    btnAll.type = "button";
+    btnAll.textContent = "All";
+    const btnNone = document.createElement("button");
+    btnNone.type = "button";
+    btnNone.textContent = "None";
+    const btnApply = document.createElement("button");
+    btnApply.type = "button";
+    btnApply.textContent = "Apply";
+    actions.appendChild(btnAll);
+    actions.appendChild(btnNone);
+    actions.appendChild(btnApply);
+    pop.appendChild(actions);
+
+    const values = getColumnValues(colId);
+    const selected = filters[colId];
+
+    const setSelected = (nextSet) => {
+      if (!nextSet || nextSet.size === values.length) {
+        delete filters[colId];
+      } else {
+        filters[colId] = nextSet;
+      }
+      renderTable();
+    };
+
+    let draft = new Set(selected ? selected : values);
+    const inputs = [];
+    const syncChecks = () => {
+      inputs.forEach(({ input, value }) => {
+        input.checked = draft.has(value);
+      });
+    };
+
+    btnAll.addEventListener("click", (e) => {
+      e.preventDefault();
+      draft = new Set(values);
+      syncChecks();
+    });
+    btnNone.addEventListener("click", (e) => {
+      e.preventDefault();
+      draft = new Set();
+      syncChecks();
+    });
+    btnApply.addEventListener("click", (e) => {
+      e.preventDefault();
+      setSelected(new Set(draft));
+    });
+
+    for (const value of values) {
+      const label = document.createElement("label");
+      label.className = "filter-option";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      const isChecked = selected ? selected.has(value) : true;
+      input.checked = isChecked;
+      input.addEventListener("change", () => {
+        if (input.checked) draft.add(value);
+        else draft.delete(value);
+      });
+      const text = document.createElement("span");
+      text.textContent = value || "(empty)";
+      label.appendChild(input);
+      label.appendChild(text);
+      pop.appendChild(label);
+      inputs.push({ input, value });
+    }
+
+    details.appendChild(pop);
+    filterWrap.appendChild(details);
+    th.appendChild(filterWrap);
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const row of filtered) {
+    const tr = document.createElement("tr");
+    for (const colId of columnOrder) {
+      const col = getColumnById(colId);
+      if (!col) continue;
+      const td = document.createElement("td");
+      if (colId === "submissionStatus") {
+        td.appendChild(renderStatusCell(row));
+      } else if (colId === "submissionFileUrl") {
+        const value = col.get(row) || "";
+        if (value) {
+          const link = document.createElement("a");
+          link.href = value;
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          link.textContent = value;
+          link.style.color = "var(--accent2)";
+          td.appendChild(link);
+        } else {
+          td.textContent = "";
+        }
+      } else {
+        td.textContent = col.get(row) || "";
+      }
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+
+  enableColumnDnD();
+}
+
+function renderStatusCell(row) {
+  const wrap = document.createElement("div");
+  wrap.className = "status-cell";
+  const status = row.submissionStatus || "";
+  const pill = document.createElement("span");
+  pill.className = "status-pill";
+  pill.textContent = status || "(empty)";
+  wrap.appendChild(pill);
+
+  if (status === "PENDING") {
+    const controls = document.createElement("div");
+    controls.className = "status-controls";
+
+    const select = document.createElement("select");
+    const approved = document.createElement("option");
+    approved.value = "APPROVED";
+    approved.textContent = "APPROVED";
+    const rejected = document.createElement("option");
+    rejected.value = "REJECTED";
+    rejected.textContent = "REJECTED";
+    select.appendChild(approved);
+    select.appendChild(rejected);
+    select.value = pendingDecisions[row.assignmentSubmissionId] || "APPROVED";
+    select.addEventListener("change", () => {
+      pendingDecisions[row.assignmentSubmissionId] = select.value;
+    });
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "Message (optional)";
+    input.value = pendingMessages[row.assignmentSubmissionId] || "";
+    input.addEventListener("input", () => {
+      pendingMessages[row.assignmentSubmissionId] = input.value;
+    });
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = pendingSubmitting[row.assignmentSubmissionId] ? "Saving…" : "Submit";
+    button.disabled = !!pendingSubmitting[row.assignmentSubmissionId];
+    button.addEventListener("click", async () => {
+      await submitStatusUpdate(row);
+    });
+
+    controls.appendChild(select);
+    controls.appendChild(input);
+    controls.appendChild(button);
+    wrap.appendChild(controls);
+  }
+
+  return wrap;
+}
+
+async function submitStatusUpdate(row) {
+  const submissionId = row.assignmentSubmissionId;
+  const status = pendingDecisions[submissionId] || "APPROVED";
+  const message = pendingMessages[submissionId] || "";
+  if (!submissionId) {
+    log("Missing submission ID; cannot update status.");
+    return;
+  }
+
+  const endpoint = document.querySelector("#endpoint").value.trim();
+  const token = document.querySelector("#token").value.trim();
+  if (!endpoint || !token) {
+    alert("Endpoint and token are required.");
+    return;
+  }
+
+  pendingSubmitting[submissionId] = true;
+  renderTable();
+  try {
+    const data = await gql(endpoint, token, MUTATION_UPDATE_ASSIGNMENT_STATUS, {
+      submissionId,
+      message: message || null,
+      status
+    });
+    row.submissionStatus = status;
+    log("Updated submission " + submissionId + " to " + row.submissionStatus + ".");
+  } catch (err) {
+    console.error(err);
+    log("Failed to update submission " + submissionId + ": " + err.message);
+    if (err && err.body) {
+      log("Error details: " + JSON.stringify(err.body));
+    }
+  } finally {
+    pendingSubmitting[submissionId] = false;
+    renderTable();
+  }
+}
+
+function computeColumnWidths(rows) {
+  const widths = {};
+  const maxSample = Math.min(rows.length, 200);
+  for (const colId of columnOrder) {
+    const col = getColumnById(colId);
+    if (!col) continue;
+    let maxLen = (col.label || "").length;
+    if (colId === "submissionFileUrl") {
+      const capped = Math.max(8, Math.min(24, maxLen));
+      widths[colId] = capped + "ch";
+      continue;
+    }
+    for (let i = 0; i < maxSample; i++) {
+      const value = col.get(rows[i]);
+      const len = String(value || "").length;
+      if (len > maxLen) maxLen = len;
+    }
+    const capped = Math.max(8, Math.min(48, maxLen));
+    widths[colId] = capped + "ch";
+  }
+  return widths;
+}
+
+function getColumnValues(colId) {
+  const col = getColumnById(colId);
+  if (!col) return [];
+  const set = new Set();
+  for (const row of tableRows) {
+    const value = col.get(row);
+    set.add(String(value || ""));
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+function enableColumnDnD() {
+  const headers = document.querySelectorAll("#results-table th");
+  headers.forEach(th => {
+    th.addEventListener("dragstart", (e) => {
+      th.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", th.dataset.colId || "");
+    });
+    th.addEventListener("dragend", () => th.classList.remove("dragging"));
+    th.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
+    th.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const fromId = e.dataTransfer.getData("text/plain");
+      const toId = th.dataset.colId;
+      if (!fromId || !toId || fromId === toId) return;
+      const fromIdx = columnOrder.indexOf(fromId);
+      const toIdx = columnOrder.indexOf(toId);
+      if (fromIdx === -1 || toIdx === -1) return;
+      columnOrder.splice(fromIdx, 1);
+      columnOrder.splice(toIdx, 0, fromId);
+      saveColumnOrder();
+      renderTable();
+    });
+  });
+}
+
+async function exportUsers() {
+  const endpoint = document.querySelector("#endpoint").value.trim();
+  const token = document.querySelector("#token").value.trim();
+  const email = document.querySelector("#user-email").value.trim();
+  const outfile = document.querySelector("#outfile").value.trim() || "thinkific-assignment-submissions.csv";
+  if (!endpoint || !token) { alert("Endpoint and token are required."); return; }
+  if (!email) { alert("User email is required."); return; }
+
+  document.querySelector("#start").disabled = true;
+  document.querySelector("#download").disabled = true;
+  document.querySelector("#log").textContent = "";
+  document.querySelector("#reset-columns").disabled = true;
+  setStatus("Starting…");
+  document.querySelector("#bar").classList.add("indeterminate");
+  setBar(0);
+
+  const detailRows = [];
+
+  try {
+    setStatus("Looking up user ID for " + email + "…");
+    log("Querying user ID by email…");
+    let userId = null;
+    while (true) {
+      try {
+        const userData = await gql(endpoint, token, QUERY_USER_BY_EMAIL, { email });
+        userId = userData && userData.userByEmail && userData.userByEmail.id ? userData.userByEmail.id : null;
+        break;
+      } catch (err) {
+        if (isRateLimitError(err)) {
+          const { waitMs, resetAt } = getRateLimitWait(err);
+          const safeWaitMs = Math.max(1000, waitMs || 0);
+          const waitSeconds = Math.ceil(safeWaitMs / 1000);
+          const resetNote = resetAt ? " (reset at " + resetAt + ")" : "";
+          setStatus("Rate limited. Waiting " + waitSeconds + "s" + resetNote + "…");
+          log("API rate limit hit while fetching user ID. Waiting " + waitSeconds + "s" + resetNote + "…");
+          document.querySelector("#bar").classList.add("indeterminate");
+          await sleep(safeWaitMs);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!userId) {
+      setStatus("No user found for " + email + ".");
+      log("No user found for " + email + ". Check the email or permissions.");
+      return;
+    }
+
+    let after = null;
+    let page = 0;
+    while (true) {
+      const targetPage = page + 1;
+      setStatus("Fetching assignment submissions page " + targetPage + (after ? " (after=" + after + ")" : "") + "…");
+      log("Requesting assignment submissions page " + targetPage + "…");
+
+      let data;
+      try {
+        data = await gql(endpoint, token, QUERY_ASSIGNMENT_SUBMISSIONS, { after, userId });
+      } catch (err) {
+        if (isRateLimitError(err)) {
+          const { waitMs, resetAt } = getRateLimitWait(err);
+          const safeWaitMs = Math.max(1000, waitMs || 0);
+          const waitSeconds = Math.ceil(safeWaitMs / 1000);
+          const resetNote = resetAt ? " (reset at " + resetAt + ")" : "";
+          setStatus("Rate limited. Waiting " + waitSeconds + "s" + resetNote + "…");
+          log("API rate limit hit while fetching assignments. Waiting " + waitSeconds + "s" + resetNote + "…");
+          document.querySelector("#bar").classList.add("indeterminate");
+          await sleep(safeWaitMs);
+          continue;
+        }
+        throw err;
+      }
+
+      page = targetPage;
+      const assignmentConn = data && data.site && data.site.assignmentSubmissions;
+      if (!assignmentConn) throw new Error("Unexpected response shape.");
+
+      const nodes = Array.isArray(assignmentConn.nodes) ? assignmentConn.nodes : [];
+      setBar(Math.min(90, page * 12));
+
+      for (const node of nodes) {
+        const courseName = node && node.course && node.course.name ? node.course.name : "";
+        const lesson = node && node.assignment && node.assignment.lesson ? node.assignment.lesson : {};
+        const assignment = node && node.assignment ? node.assignment : {};
+        const user = node && node.user ? node.user : {};
+        const file = node && node.file ? node.file : {};
+
+        detailRows.push({
+          assignmentSubmissionId: node && node.id ? node.id : "",
+          courseName,
+          lessonId: lesson.id || "",
+          lessonTitle: lesson.title || "",
+          submissionCreatedAt: node.createdAt || "",
+          submissionReviewedAt: node.reviewedAt || "",
+          submissionStatus: node.status || "",
+          submissionFileUrl: file.url || "",
+          userId: user.id || "",
+          userEmail: user.email || "",
+          userFirstName: user.firstName || "",
+          userLastName: user.lastName || ""
+        });
+      }
+
+      if (assignmentConn.pageInfo && assignmentConn.pageInfo.hasNextPage) {
+        after = assignmentConn.pageInfo.endCursor;
+      } else {
+        break;
+      }
+    }
+
+    tableRows = detailRows;
+    renderTable();
+    document.querySelector("#reset-columns").disabled = false;
+
+    if (detailRows.length === 0) {
+      setStatus("No assignment submissions found.");
+      log("No assignment submissions returned for " + email + ".");
+      return;
+    }
+
+    setStatus("Ready ✔  (" + detailRows.length + " assignment rows)");
+    setBar(100);
+
+    const dlBtn = document.querySelector("#download");
+    dlBtn.disabled = false;
+    dlBtn.onclick = () => {
+    const csv = toCSV(detailRows, columnOrder);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = outfile;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+
+    log("Ready. Use Download CSV to export the current results.");
+  } catch (err) {
+    console.error(err);
+    setStatus("Error ⚠ " + err.message);
+    log("Error: " + err.message);
+    if (err && err.body) {
+      log("Error details: " + JSON.stringify(err.body));
+    }
+  } finally {
+    document.querySelector("#start").disabled = false;
+  }
+}
+
+const TOKEN_KEY = "thinkific-assignment-export-token";
+const saved = localStorage.getItem(TOKEN_KEY);
+if (saved) {
+  document.querySelector("#token").value = saved;
+  log("Loaded saved API key from this device.");
+}
+loadColumnOrder();
+document.querySelector("#save-token").addEventListener("click", () => {
+  const token = document.querySelector("#token").value.trim();
+  if (!token) { alert("Enter a token before saving."); return; }
+  localStorage.setItem(TOKEN_KEY, token);
+  log("API key saved to this device.");
+});
+
+document.querySelector("#start").addEventListener("click", exportUsers);
+document.querySelector("#reset-columns").addEventListener("click", resetColumns);
+
+const resizeBox = document.querySelector("#table-resize");
+const resizeHandle = document.querySelector("#table-resize-handle");
+if (resizeBox && resizeHandle) {
+  resizeHandle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = resizeBox.getBoundingClientRect().width;
+    const startHeight = resizeBox.getBoundingClientRect().height;
+
+    const onMove = (ev) => {
+      const nextWidth = Math.max(600, startWidth + (ev.clientX - startX));
+      const nextHeight = Math.max(240, startHeight + (ev.clientY - startY));
+      resizeBox.style.width = Math.round(nextWidth) + "px";
+      resizeBox.style.height = Math.round(nextHeight) + "px";
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+}
+</script>
+</body>
+</html>

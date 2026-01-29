@@ -173,9 +173,10 @@ const QUERY_SCORM_COURSE_CMIS_PAGE = `query GetCourseCmis($courseName: String!, 
 }`;
 
 function attachRateLimit(err, payload) {
-  if (payload && payload.extensions && payload.extensions.rateLimit) {
-    err.rateLimit = payload.extensions.rateLimit;
-  }
+  if (!payload) return;
+  const rl = payload.extensions && payload.extensions.rateLimit
+    || (payload.errors && payload.errors[0] && payload.errors[0].extensions && payload.errors[0].extensions.rateLimit);
+  if (rl) err.rateLimit = rl;
 }
 
 async function gql(endpoint, token, query, variables) {
@@ -219,34 +220,62 @@ async function gql(endpoint, token, query, variables) {
     throw err;
   }
 
-  return json.data;
+  const rateLimit = json.extensions && json.extensions.rateLimit ? json.extensions.rateLimit : undefined;
+  return { data: json.data, rateLimit };
 }
 
 function isRateLimitError(err) {
   if (!err) return false;
+  if (err.status === 429) return true;
   if (err.code === "RATE_LIMITED") return true;
+  // Thinkific wraps 429 as INTERNAL_SERVER_ERROR with extensions.response.status 429
   if (Array.isArray(err.graphQLErrors)) {
-    return err.graphQLErrors.some(e => e.extensions && e.extensions.code === "RATE_LIMITED");
+    const isRateLimited = err.graphQLErrors.some(e => e.extensions && e.extensions.code === "RATE_LIMITED");
+    if (isRateLimited) return true;
+    const has429Response = err.graphQLErrors.some(e => e.extensions && e.extensions.response && e.extensions.response.status === 429);
+    if (has429Response) return true;
   }
-  return typeof err.message === "string" && err.message.toLowerCase().includes("rate limit");
+  const msg = typeof err.message === "string" ? err.message.toLowerCase() : "";
+  return msg.includes("rate limit") || msg.includes("429") || msg.includes("too many requests");
 }
 
+const RATE_LIMIT_WAIT_MS = 60 * 1000; // always wait at least 60s on 429
+
 function getRateLimitWait(err) {
-  const fallbackMs = 60 * 1000;
   const rl = err && err.rateLimit;
+  let waitMs = RATE_LIMIT_WAIT_MS;
+  let resetAt = rl && rl.resetAt;
   if (rl && rl.resetAt) {
     const resetAtMs = new Date(rl.resetAt).getTime();
     if (Number.isFinite(resetAtMs)) {
       const diff = resetAtMs - Date.now();
-      if (diff > 0) {
-        return {
-          waitMs: Math.min(diff, 5 * 60 * 1000),
-          resetAt: rl.resetAt
-        };
-      }
+      if (diff > 0) waitMs = Math.max(RATE_LIMIT_WAIT_MS, Math.min(diff, 5 * 60 * 1000));
     }
   }
-  return { waitMs: fallbackMs, resetAt: rl && rl.resetAt };
+  return { waitMs, resetAt };
+}
+
+/** If remaining points are low, wait until reset (or 60s) to avoid hitting 429. */
+async function cooldownFromRateLimit(rateLimit) {
+  if (!rateLimit || rateLimit.remaining == null || !rateLimit.limit) return;
+  const remaining = Number(rateLimit.remaining);
+  const limit = Number(rateLimit.limit);
+  const threshold = 250; // headroom for next request (cost can be 200+)
+  if (remaining >= threshold) return;
+
+  let waitMs = RATE_LIMIT_WAIT_MS;
+  if (rateLimit.resetAt) {
+    const resetAtMs = new Date(rateLimit.resetAt).getTime();
+    if (Number.isFinite(resetAtMs)) {
+      const diff = resetAtMs - Date.now();
+      if (diff > 0) waitMs = Math.max(RATE_LIMIT_WAIT_MS, Math.min(diff, 5 * 60 * 1000));
+    }
+  }
+  const waitSeconds = Math.ceil(waitMs / 1000);
+  setStatus("Cooldown: " + remaining + " / " + limit + " points left. Waiting " + waitSeconds + "s…");
+  log("Rate limit low (" + remaining + " / " + limit + "). Waiting " + waitSeconds + "s until reset…");
+  document.querySelector("#bar").classList.add("indeterminate");
+  await sleep(waitMs);
 }
 
 function csvEscape(value) {
@@ -257,7 +286,7 @@ function csvEscape(value) {
 }
 
 function toCSV(rows) {
-  const header = ["courseId","courseName","email","firstName","lastName","lastSignInAt","interactionId","interactionType","result","learnerResponse","correctResponses"];
+  const header = ["courseId","courseName","email","firstName","lastName","lastSignInAt","completeAt","interactionId","interactionType","result","learnerResponse","correctResponses"];
   const lines = [header.map(csvEscape).join(",")];
   for (const r of rows) {
     const line = [
@@ -267,6 +296,7 @@ function toCSV(rows) {
       r.firstName,
       r.lastName,
       r.lastSignInAt,
+      r.completeAt,
       r.interactionId,
       r.interactionType,
       r.result,
@@ -304,17 +334,18 @@ async function exportUsers() {
 
       let data;
       try {
-        data = await gql(endpoint, token, QUERY_SCORM_COURSES, { after: courseAfter });
+        const result = await gql(endpoint, token, QUERY_SCORM_COURSES, { after: courseAfter });
+        data = result.data;
+        if (result.rateLimit) await cooldownFromRateLimit(result.rateLimit);
       } catch (err) {
         if (isRateLimitError(err)) {
           const { waitMs, resetAt } = getRateLimitWait(err);
-          const safeWaitMs = Math.max(1000, waitMs || 0);
-          const waitSeconds = Math.ceil(safeWaitMs / 1000);
+          const waitSeconds = Math.ceil(waitMs / 1000);
           const resetNote = resetAt ? " (reset at " + resetAt + ")" : "";
           setStatus("Rate limited. Waiting " + waitSeconds + "s" + resetNote + "…");
           log("API rate limit hit while fetching courses. Waiting " + waitSeconds + "s" + resetNote + "…");
           document.querySelector("#bar").classList.add("indeterminate");
-          await sleep(safeWaitMs);
+          await sleep(waitMs);
           continue;
         }
         throw err;
@@ -353,6 +384,7 @@ async function exportUsers() {
                 firstName: user.firstName || "",
                 lastName: user.lastName || "",
                 lastSignInAt: user.lastSignInAt || "",
+                completeAt: cmi.updatedAt || "",
                 interactionId: interaction.id || "",
                 interactionType: interaction.interactionType || "",
                 result: interaction.result || "",
@@ -371,7 +403,9 @@ async function exportUsers() {
           setStatus("Fetching CMIs for course " + (courseName || courseId) + "…");
           log("Requesting CMIs for course " + (courseName || courseId) + " after cursor " + (cmiAfter || "(start)") + "…");
           try {
-            const cmisData = await gql(endpoint, token, QUERY_SCORM_COURSE_CMIS_PAGE, { courseName, after: cmiAfter });
+            const result = await gql(endpoint, token, QUERY_SCORM_COURSE_CMIS_PAGE, { courseName, after: cmiAfter });
+            const cmisData = result.data;
+            if (result.rateLimit) await cooldownFromRateLimit(result.rateLimit);
             const courseNode = cmisData && cmisData.site && cmisData.site.courses && cmisData.site.courses.nodes && cmisData.site.courses.nodes[0];
             cmis = courseNode && courseNode.package && courseNode.package.cmis;
             appendCmis(cmis);
@@ -379,13 +413,12 @@ async function exportUsers() {
           } catch (err) {
             if (isRateLimitError(err)) {
               const { waitMs, resetAt } = getRateLimitWait(err);
-              const safeWaitMs = Math.max(1000, waitMs || 0);
-              const waitSeconds = Math.ceil(safeWaitMs / 1000);
+              const waitSeconds = Math.ceil(waitMs / 1000);
               const resetNote = resetAt ? " (reset at " + resetAt + ")" : "";
               setStatus("Rate limited. Waiting " + waitSeconds + "s" + resetNote + "…");
               log("API rate limit hit while fetching CMIs for course " + (courseName || courseId) + ". Waiting " + waitSeconds + "s" + resetNote + "…");
               document.querySelector("#bar").classList.add("indeterminate");
-              await sleep(safeWaitMs);
+              await sleep(waitMs);
               continue;
             }
             throw err;

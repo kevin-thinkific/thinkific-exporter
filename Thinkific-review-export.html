@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Thinkific Reviews Exporter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --bg:#2b1633; --card:#2a1732; --ink:#f7f2ec; --muted:#d6c8bf; --accent:#f2c234; --accent2:#f4d45e; --border:#3a2241; --thinkific:#24111f }
+    body { margin:0; padding:24px; background:
+      radial-gradient(1100px 600px at 10% 20%, rgba(255,255,255,.08), transparent 60%),
+      radial-gradient(900px 500px at 90% 30%, rgba(244,212,94,.12), transparent 55%),
+      linear-gradient(180deg, #2b1633 0%, #24112c 100%);
+      color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .wrap { max-width:none; margin:0 auto; width:max-content; min-width:900px }
+    .card { background:linear-gradient(180deg, #2b1633, #24112c); border:1px solid var(--border); border-radius:20px; padding:24px; box-shadow:0 18px 44px rgba(0,0,0,.45) }
+    h1 { margin:.2em 0 .35em; font-size:2.1rem; font-family: Georgia, "Times New Roman", Times, serif; letter-spacing:.2px }
+    .muted { color:var(--muted); font-size:.95rem }
+    .brand { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px }
+    .brand-left { display:flex; align-items:center; gap:12px }
+    .brand-name { font-weight:700; font-size:1.05rem; color:var(--ink) }
+    .brand-tag { font-size:.8rem; color:var(--muted) }
+    .brand-link { color:var(--ink); text-decoration:none; font-size:.85rem; border:1px solid rgba(247,242,236,.5); padding:6px 12px; border-radius:999px }
+    .brand-link:hover { background:rgba(247,242,236,.1) }
+    label { display:block; margin-top:12px; font-size:.95rem; color:#cbd5e1 }
+    .token-save { display:flex; gap:8px; align-items:center; margin-top:6px }
+    .token-save input { flex:1 }
+    .token-save button { flex:0 0 auto; padding:10px 14px; font-size:.95rem }
+    input, textarea, select { width:100%; padding:10px 12px; border-radius:12px; border:1px solid #263249; background:#0a1220; color:var(--ink) }
+    textarea { min-height:84px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .row { display:flex; gap:12px; align-items:flex-end }
+    .row > * { flex:1 }
+    .btns { display:flex; gap:12px; margin-top:16px }
+    button { flex:1; padding:12px 16px; border-radius:999px; border:0; background:var(--accent); color:#2b1633; font-weight:700; font-size:1rem; cursor:pointer }
+    button.secondary { background:transparent; border:1px solid rgba(247,242,236,.6); color:var(--ink) }
+    button:disabled { opacity:.6; cursor:not-allowed }
+    .progress { position:relative; margin-top:14px; height:12px; background:#0a1220; border:1px solid #263249; border-radius:999px; overflow:hidden }
+    .bar { position:absolute; inset:0; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition:width .2s linear }
+    .bar.indeterminate::before { content:""; position:absolute; left:-40%; top:0; width:40%; height:100%; background:linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); animation: slide 1.1s infinite }
+    @keyframes slide { 0% { left:-40% } 100% { left:100% } }
+    .status { margin-top:8px; font-size:.9rem; color:#cbd5e1 }
+    .log { margin-top:12px; background:#0a1220; border:1px solid #263249; border-radius:12px; padding:10px; font-size:.85rem; max-height:220px; overflow:auto; white-space:pre-wrap }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #263249; font-size:.75rem; color:#cbd5e1 }
+    .table-resize { margin-top:16px; border:1px solid #263249; border-radius:14px; background:#0a1220; overflow:hidden; min-height:240px; width:900px; height:420px; padding:0 20px 20px 0; position:relative }
+    .table-resize-handle { position:absolute; right:6px; bottom:6px; width:18px; height:18px; cursor:se-resize; }
+    .table-resize-handle::after { content:""; position:absolute; right:2px; bottom:2px; width:12px; height:12px; border-right:2px solid rgba(203,213,225,.6); border-bottom:2px solid rgba(203,213,225,.6); }
+    .table-wrap { display:flex; flex-direction:column; height:100%; overflow:hidden; margin:0 -20px -20px 0 }
+    .table-toolbar { display:flex; gap:12px; align-items:center; padding:10px 12px; border-bottom:1px solid #263249; background:rgba(15,23,42,.6) }
+    .table-toolbar .muted { font-size:.85rem }
+    .table-toolbar button { flex:0 0 auto; padding:8px 12px; font-size:.85rem; border-radius:10px }
+    table { width:100%; border-collapse:collapse; font-size:.9rem; table-layout:auto }
+    th, td { padding:8px 10px; border-bottom:1px solid #1f2a3e; vertical-align:top; white-space:nowrap }
+    th { background:#0b1324; position:sticky; top:0; z-index:1; text-align:left }
+    th.dragging { opacity:.6 }
+    th .col-label { display:flex; align-items:center; gap:8px; cursor:grab }
+    th .col-label span { font-weight:600 }
+    .table-scroll { flex:1; min-height:200px; overflow:auto }
+    .empty { padding:14px; color:var(--muted); font-size:.9rem }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="brand">
+        <div class="brand-left">
+          <div>
+            <div class="brand-name">Thinkific</div>
+            <div class="brand-tag">Review Exporter</div>
+          </div>
+        </div>
+        <a class="brand-link" href="https://www.thinkific.com/" target="_blank" rel="noreferrer">thinkific.com</a>
+      </div>
+      <h1>Review Exporter</h1>
+      <div class="muted">
+
+      </div>
+
+      <input id="endpoint" type="hidden" value="https://api.thinkific.com/stable/graphql">
+
+      <div class="row">
+        <label>Output File
+          <input id="outfile" value="thinkific-review-export.csv">
+        </label>
+        <label>REST Delay (ms)
+          <input id="rest-delay" type="number" min="0" step="50" value="500">
+        </label>
+      </div>
+
+      <div class="row">
+        <label>Product Status
+          <select id="product-status">
+            <option value="">None</option>
+            <option value="DRAFT">DRAFT</option>
+            <option value="PUBLISHED">PUBLISHED</option>
+          </select>
+        </label>
+        <label>Course Name Filter
+          <input id="course-name-filter" placeholder="Leave blank for all courses">
+        </label>
+      </div>
+
+      <label>Bearer Token (saved on this device)
+        <div class="token-save">
+          <input id="token" value="add access token here!">
+          <button id="save-token" type="button" class="secondary">Save API Key</button>
+        </div>
+      </label>
+
+      <div class="btns">
+        <button id="start">Start Export</button>
+        <button id="download" class="secondary" disabled>Download CSV</button>
+      </div>
+
+      <div class="progress"><div id="bar" class="bar indeterminate"></div></div>
+      <div id="status" class="status">Idle</div>
+      <div id="log" class="log"></div>
+
+      <div class="table-resize" id="table-resize">
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div class="muted" id="table-meta">No results yet.</div>
+            <div style="flex:1"></div>
+            <button id="reset-columns" type="button" class="secondary" disabled>Reset Columns</button>
+          </div>
+          <div class="table-scroll">
+            <table id="results-table" aria-live="polite"></table>
+          </div>
+          <div id="table-empty" class="empty">Run an export to see results.</div>
+        </div>
+        <div class="table-resize-handle" id="table-resize-handle" aria-hidden="true"></div>
+      </div>
+
+      <p class="muted">
+        <span class="pill">CORS</span> This runs in the browser. If you see a CORS error, you’ll need to run a CLI variant.
+      </p>
+    </div>
+  </div>
+
+<script>
+const $ = s => document.querySelector(s);
+const log = (m) => ( $("#log").textContent += ( $("#log").textContent ? "\n" : "" ) + m, $("#log").scrollTop = $("#log").scrollHeight );
+const setStatus = (t) => $("#status").textContent = t;
+const setBar = (pct) => { const b = $("#bar"); b.classList.remove("indeterminate"); b.style.width = Math.max(0,Math.min(100,pct)) + "%"; };
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const COURSES_PAGE_SIZE = 100;
+const REVIEWS_PAGE_SIZE = 100;
+const COURSE_LOOKUP_MAX = 100;
+
+function buildCoursesQuery(productStatus, nameFilter) {
+  const filters = [];
+  if (productStatus) filters.push("productStatus: " + productStatus);
+  if (nameFilter) filters.push("name: " + JSON.stringify(nameFilter));
+  const filterBlock = filters.length ? ", filter: { " + filters.join(", ") + " }" : "";
+  return `query CoursesPage($after: String) {
+  site {
+    courses(first: ${COURSES_PAGE_SIZE}, after: $after${filterBlock}) {
+      nodes {
+        id
+        name
+        reviews(first: ${REVIEWS_PAGE_SIZE}) {
+          nodes { id }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}`;
+}
+
+function buildCourseReviewsQuery(productStatus) {
+  const filters = ["name: $courseName"];
+  if (productStatus) filters.push("productStatus: " + productStatus);
+  return `query CourseReviewsPageByName($courseName: String!, $after: String) {
+  site {
+    courses(filter: { ${filters.join(", ")} }, first: ${COURSE_LOOKUP_MAX}) {
+      nodes {
+        id
+        name
+        reviews(first: ${REVIEWS_PAGE_SIZE}, after: $after) {
+          nodes { id }
+          pageInfo { hasNextPage endCursor }
+        }
+      }
+    }
+  }
+}`;
+}
+
+function attachRateLimit(err, payload) {
+  if (payload && payload.extensions && payload.extensions.rateLimit) {
+    err.rateLimit = payload.extensions.rateLimit;
+  }
+}
+
+async function gql(endpoint, token, query, variables) {
+  const resp = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({ query, variables })
+  });
+
+  let json;
+  try {
+    json = await resp.json();
+  } catch (parseErr) {
+    if (!resp.ok) {
+      const err = new Error("HTTP " + resp.status + " - " + resp.statusText);
+      err.status = resp.status;
+      throw err;
+    }
+    throw new Error("Invalid JSON response.");
+  }
+
+  if (!resp.ok) {
+    const err = new Error("HTTP " + resp.status + " - " + resp.statusText);
+    err.status = resp.status;
+    err.body = json;
+    attachRateLimit(err, json);
+    throw err;
+  }
+
+  if (json.errors) {
+    const msg = json.errors.map(e => e.message).join("; ");
+    const err = new Error("GraphQL error: " + msg);
+    err.graphQLErrors = json.errors;
+    const code = json.errors.find(e => e.extensions && e.extensions.code)?.extensions.code;
+    if (code) err.code = code;
+    attachRateLimit(err, json);
+    throw err;
+  }
+
+  return json.data;
+}
+
+function isRateLimitError(err) {
+  if (!err) return false;
+  if (err.code === "RATE_LIMITED") return true;
+  if (Array.isArray(err.graphQLErrors)) {
+    return err.graphQLErrors.some(e => e.extensions && e.extensions.code === "RATE_LIMITED");
+  }
+  return typeof err.message === "string" && err.message.toLowerCase().includes("rate limit");
+}
+
+function getRateLimitWait(err) {
+  const fallbackMs = 60 * 1000;
+  const rl = err && err.rateLimit;
+  if (rl && rl.resetAt) {
+    const resetAtMs = new Date(rl.resetAt).getTime();
+    if (Number.isFinite(resetAtMs)) {
+      const diff = resetAtMs - Date.now();
+      if (diff > 0) {
+        return {
+          waitMs: Math.min(diff, 5 * 60 * 1000),
+          resetAt: rl.resetAt
+        };
+      }
+    }
+  }
+  return { waitMs: fallbackMs, resetAt: rl && rl.resetAt };
+}
+
+async function gqlRetry(endpoint, token, query, variables, contextLabel) {
+  while (true) {
+    try {
+      return await gql(endpoint, token, query, variables);
+    } catch (err) {
+      if (isRateLimitError(err)) {
+        const { waitMs, resetAt } = getRateLimitWait(err);
+        const safeWaitMs = Math.max(1000, waitMs || 0);
+        const waitSeconds = Math.ceil(safeWaitMs / 1000);
+        const resetNote = resetAt ? " (reset at " + resetAt + ")" : "";
+        setStatus("Rate limited. Waiting " + waitSeconds + "s" + resetNote + "…");
+        log("API rate limit hit" + (contextLabel ? " while " + contextLabel : "") + ". Waiting " + waitSeconds + "s" + resetNote + "…");
+        $("#bar").classList.add("indeterminate");
+        await sleep(safeWaitMs);
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+const REVIEW_API_ENDPOINT = "https://api.thinkific.com/api/public/v1/course_reviews";
+const USER_API_ENDPOINT = "https://api.thinkific.com/api/public/v1/users";
+const REVIEW_DETAIL_CONCURRENCY = 4;
+const REST_DELAY_DEFAULT_MS = 500;
+
+function getRestDelayMs() {
+  const el = $("#rest-delay");
+  const raw = el ? el.value : "";
+  const ms = Number(raw);
+  if (!Number.isFinite(ms) || ms < 0) return REST_DELAY_DEFAULT_MS;
+  return Math.min(ms, 10 * 60 * 1000);
+}
+
+let restQueue = Promise.resolve();
+let lastRestCallAt = 0;
+
+function enqueueRestTask(task) {
+  const run = async () => await task();
+  const p = restQueue.catch(() => {}).then(run);
+  restQueue = p.catch(() => {});
+  return p;
+}
+
+async function requestJson(url, token) {
+  return enqueueRestTask(async () => {
+    let attempt = 1;
+    while (true) {
+      const delayMs = getRestDelayMs();
+      const now = Date.now();
+      const sinceLast = now - lastRestCallAt;
+      const waitForDelay = delayMs > 0 ? Math.max(0, delayMs - sinceLast) : 0;
+      if (waitForDelay) await sleep(waitForDelay);
+      lastRestCallAt = Date.now();
+
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + token,
+          "Accept": "application/json"
+        }
+      });
+
+      if (resp.status === 429 && attempt <= 3) {
+        const retryAfter = Number(resp.headers.get("Retry-After") || "0");
+        const waitMs = Math.max(1000, Math.min(60000, (retryAfter || 2) * 1000));
+        await sleep(waitMs);
+        attempt += 1;
+        continue;
+      }
+
+      let json = null;
+      try {
+        json = await resp.json();
+      } catch {
+        // ignore parse error
+      }
+
+      if (!resp.ok) {
+        const err = new Error("HTTP " + resp.status + " - " + resp.statusText);
+        err.status = resp.status;
+        err.body = json;
+        throw err;
+      }
+
+      return json;
+    }
+  });
+}
+
+function extractCourseReviewFromResponse(json) {
+  if (!json) return null;
+  if (json.course_review && typeof json.course_review === "object") return json.course_review;
+  if (json.courseReview && typeof json.courseReview === "object") return json.courseReview;
+  if (json.data) {
+    if (json.data.course_review && typeof json.data.course_review === "object") return json.data.course_review;
+    if (json.data.courseReview && typeof json.data.courseReview === "object") return json.data.courseReview;
+  }
+  return typeof json === "object" ? json : null;
+}
+
+function normalizeCellValue(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") return JSON.stringify(value);
+  return value;
+}
+
+function sanitizeCourseReviewPayload(payload) {
+  const out = {};
+  if (!payload || typeof payload !== "object") return out;
+  for (const [key, raw] of Object.entries(payload)) {
+    const k = String(key || "");
+    const lower = k.toLowerCase();
+    if (!k) continue;
+    if (lower === "id") continue;
+    if (lower === "course_id") continue;
+    if (lower === "courseid") continue;
+    out[k] = normalizeCellValue(raw);
+  }
+  return out;
+}
+
+function tryBase64Decode(s) {
+  if (!s) return null;
+  try {
+    // atob is available in browsers
+    return atob(String(s));
+  } catch {
+    return null;
+  }
+}
+
+function restIdFromAny(value) {
+  const s = String(value || "").trim();
+  if (!s) return "";
+  if (/^\d+$/.test(s)) return s;
+  const m1 = s.match(/(\d+)(?!.*\d)/);
+  if (m1) return m1[1];
+  const decoded = tryBase64Decode(s);
+  if (decoded) {
+    const m2 = String(decoded).match(/(\d+)(?!.*\d)/);
+    if (m2) return m2[1];
+  }
+  return s;
+}
+
+async function fetchCourseReviewDetails(token, reviewId) {
+  const restId = restIdFromAny(reviewId);
+  if (!restId) return null;
+  const json = await requestJson(REVIEW_API_ENDPOINT + "/" + encodeURIComponent(restId), token);
+  const payload = extractCourseReviewFromResponse(json);
+  if (!payload) return null;
+  return sanitizeCourseReviewPayload(payload);
+}
+
+function extractUserFromResponse(json) {
+  if (!json) return null;
+  if (json.user && typeof json.user === "object") return json.user;
+  if (json.data) {
+    if (json.data.user && typeof json.data.user === "object") return json.data.user;
+  }
+  return typeof json === "object" ? json : null;
+}
+
+async function fetchUserBasics(token, userId) {
+  const restId = restIdFromAny(userId);
+  if (!restId) return null;
+  const json = await requestJson(USER_API_ENDPOINT + "/" + encodeURIComponent(restId), token);
+  const payload = extractUserFromResponse(json);
+  if (!payload) return null;
+
+  const email = payload.email || payload.email_address || payload.emailAddress || "";
+  const firstName = payload.first_name || payload.firstName || "";
+  const lastName = payload.last_name || payload.lastName || "";
+  return {
+    userEmail: normalizeCellValue(email),
+    userFirstName: normalizeCellValue(firstName),
+    userLastName: normalizeCellValue(lastName)
+  };
+}
+
+function tryParseJsonObjectString(value) {
+  const s = String(value || "").trim();
+  if (!s) return null;
+  if (!(s.startsWith("{") && s.endsWith("}"))) return null;
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+function getUserIdFromRow(row) {
+  if (!row || typeof row !== "object") return "";
+  const direct = row.user_id ?? row.userId ?? row.userID ?? row.userid ?? "";
+  if (direct !== null && direct !== undefined && String(direct).trim() !== "") return String(direct).trim();
+  const userVal = row.user;
+  if (userVal && typeof userVal === "object") {
+    const inner = userVal.id ?? userVal.user_id ?? userVal.userId ?? "";
+    if (inner !== null && inner !== undefined && String(inner).trim() !== "") return String(inner).trim();
+  }
+  if (typeof userVal === "string") {
+    const parsed = tryParseJsonObjectString(userVal);
+    if (parsed && typeof parsed === "object") {
+      const inner = parsed.id ?? parsed.user_id ?? parsed.userId ?? "";
+      if (inner !== null && inner !== undefined && String(inner).trim() !== "") return String(inner).trim();
+    }
+  }
+  return "";
+}
+
+async function hydrateUserDetails(token, rows) {
+  const userIds = [];
+  const seen = new Set();
+  for (const row of rows) {
+    const rawId = getUserIdFromRow(row);
+    const userId = restIdFromAny(rawId);
+    if (!userId) continue;
+    if (seen.has(userId)) continue;
+    seen.add(userId);
+    userIds.push(userId);
+  }
+
+  const total = userIds.length;
+  if (!total) {
+    log("No user IDs found in review payload; skipping user lookup.");
+    return;
+  }
+
+  const detailsById = new Map();
+  for (let i = 0; i < total; i++) {
+    const userId = userIds[i];
+    setStatus("Fetching user details " + (i + 1) + "/" + total + "…");
+    setBar(95 + Math.floor(((i + 1) / total) * 4));
+    try {
+      const details = await fetchUserBasics(token, userId);
+      if (details) detailsById.set(userId, details);
+    } catch (err) {
+      log("⚠ User details fetch failed for " + userId + ": " + err.message);
+      if (err && err.body) log("  Details: " + JSON.stringify(err.body));
+    }
+  }
+
+  for (const row of rows) {
+    const userId = restIdFromAny(getUserIdFromRow(row));
+    const details = detailsById.get(userId);
+    if (details) Object.assign(row, details);
+  }
+}
+
+async function hydrateReviewDetails(token, rows) {
+  const reviewIds = [];
+  const seenIds = new Set();
+  for (const row of rows) {
+    const reviewId = row && row.reviewId ? String(row.reviewId) : "";
+    if (!reviewId) continue;
+    if (seenIds.has(reviewId)) continue;
+    seenIds.add(reviewId);
+    reviewIds.push(reviewId);
+  }
+
+  const total = reviewIds.length;
+  if (!total) return new Set();
+
+  const detailsById = new Map();
+  const extraKeys = new Set();
+  let completed = 0;
+  let idx = 0;
+  const workersCount = Math.max(1, Math.min(REVIEW_DETAIL_CONCURRENCY, total));
+
+  const worker = async () => {
+    while (true) {
+      const i = idx++;
+      if (i >= total) return;
+      const reviewId = reviewIds[i];
+      try {
+        const details = await fetchCourseReviewDetails(token, reviewId);
+        if (details && typeof details === "object") {
+          detailsById.set(reviewId, details);
+          for (const k of Object.keys(details)) extraKeys.add(k);
+        }
+      } catch (err) {
+        log("⚠ Review details fetch failed for " + reviewId + ": " + err.message);
+        if (err && err.body) log("  Details: " + JSON.stringify(err.body));
+      } finally {
+        completed += 1;
+        setStatus("Fetching review details " + completed + "/" + total + "…");
+        setBar(70 + Math.floor((completed / total) * 25));
+      }
+    }
+  };
+
+  setStatus("Fetching review details 0/" + total + "…");
+  const workers = Array.from({ length: workersCount }, () => worker());
+  await Promise.all(workers);
+
+  for (const row of rows) {
+    const reviewId = row && row.reviewId ? String(row.reviewId) : "";
+    const details = detailsById.get(reviewId);
+    if (details) Object.assign(row, details);
+  }
+
+  return extraKeys;
+}
+
+function csvEscape(value) {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+const BASE_COLUMN_DEFS = [
+  { id: "reviewId", label: "Review ID", get: r => r.reviewId },
+  { id: "courseId", label: "Course ID", get: r => r.courseId },
+  { id: "courseName", label: "Course", get: r => r.courseName },
+  { id: "user_id", label: "User ID", get: r => restIdFromAny(getUserIdFromRow(r)) },
+  { id: "userEmail", label: "User Email", get: r => r.userEmail },
+  { id: "userFirstName", label: "User First Name", get: r => r.userFirstName },
+  { id: "userLastName", label: "User Last Name", get: r => r.userLastName },
+  { id: "approved", label: "Approved", get: r => r.approved ?? r.is_approved ?? r.isApproved ?? "" },
+  { id: "created_at", label: "Created At", get: r => r.created_at ?? r.createdAt ?? "" },
+  { id: "rating", label: "Rating", get: r => r.rating ?? "" },
+  { id: "title", label: "Title", get: r => r.title ?? r.headline ?? "" },
+  { id: "review_text", label: "Review Text", get: r => r.review_text ?? r.reviewText ?? r.review ?? r.body ?? r.text ?? "" }
+];
+
+let COLUMN_DEFS = [...BASE_COLUMN_DEFS];
+let tableRows = [];
+const COLUMN_ORDER_KEY = "thinkific-review-export-column-order";
+let columnOrder = COLUMN_DEFS.map(c => c.id);
+const OLD_DEFAULT_COLUMN_ORDERS = [
+  ["courseId","courseName","reviewId","userEmail","userFirstName","userLastName"],
+  ["reviewId","courseId","courseName","userEmail","userFirstName","userLastName"]
+];
+
+function getColumnById(id) {
+  return COLUMN_DEFS.find(c => c.id === id);
+}
+
+function humanizeKeyLabel(key) {
+  const s = String(key || "").trim();
+  if (!s) return "";
+  return s
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function reconcileColumnOrder() {
+  const ids = COLUMN_DEFS.map(c => c.id);
+  const next = [];
+  const seen = new Set();
+
+  for (const id of columnOrder) {
+    const s = String(id || "");
+    if (!s) continue;
+    if (seen.has(s)) continue;
+    seen.add(s);
+    next.push(s);
+  }
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    next.push(id);
+  }
+  columnOrder = next;
+}
+
+function setExtraColumns(extraKeys) {
+  const baseIds = new Set(BASE_COLUMN_DEFS.map(c => c.id));
+  const keys = Array.from(extraKeys || [])
+    .map(k => String(k || "").trim())
+    .filter(Boolean)
+    .filter(k => !baseIds.has(k));
+
+  keys.sort((a, b) => a.localeCompare(b));
+  COLUMN_DEFS = [
+    ...BASE_COLUMN_DEFS,
+    ...keys.map((k) => ({ id: k, label: humanizeKeyLabel(k) || k, get: r => r[k] }))
+  ];
+  reconcileColumnOrder();
+}
+
+function loadColumnOrder() {
+  const saved = localStorage.getItem(COLUMN_ORDER_KEY);
+  if (!saved) return;
+  try {
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return;
+    const next = parsed.map((v) => String(v || "")).filter(Boolean);
+    const isOldDefault = OLD_DEFAULT_COLUMN_ORDERS.some((order) =>
+      next.length === order.length && next.every((v, i) => v === order[i])
+    );
+    if (isOldDefault) {
+      columnOrder = COLUMN_DEFS.map(c => c.id);
+      saveColumnOrder();
+      return;
+    }
+    columnOrder = next;
+  } catch {
+    // ignore invalid stored value
+  }
+}
+
+function saveColumnOrder() {
+  localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(columnOrder));
+}
+
+function resetColumns() {
+  columnOrder = COLUMN_DEFS.map(c => c.id);
+  saveColumnOrder();
+  renderTable();
+}
+
+function computeColumnWidths(rows) {
+  const widths = {};
+  const sample = rows.length > 250 ? rows.slice(0, 250) : rows;
+  for (const colId of columnOrder) {
+    const col = getColumnById(colId);
+    if (!col) continue;
+    let maxLen = Math.max(4, String(col.label || col.id).length);
+    for (const row of sample) {
+      const value = col.get(row);
+      const len = String(value ?? "").length;
+      if (len > maxLen) maxLen = len;
+    }
+    const capped = Math.max(10, Math.min(56, maxLen));
+    widths[colId] = capped + "ch";
+  }
+  return widths;
+}
+
+function renderTable() {
+  const table = $("#results-table");
+  const empty = $("#table-empty");
+  const meta = $("#table-meta");
+  table.innerHTML = "";
+
+  if (!tableRows.length) {
+    empty.style.display = "block";
+    empty.textContent = "Run an export to see results.";
+    meta.textContent = "No results yet.";
+    return;
+  }
+
+  meta.textContent = tableRows.length + " rows";
+  empty.style.display = "none";
+
+  const colgroup = document.createElement("colgroup");
+  const columnWidths = computeColumnWidths(tableRows);
+  for (const colId of columnOrder) {
+    const col = getColumnById(colId);
+    if (!col) continue;
+    const colEl = document.createElement("col");
+    const width = columnWidths[colId];
+    if (width) colEl.style.width = width;
+    colgroup.appendChild(colEl);
+  }
+  table.appendChild(colgroup);
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  for (const colId of columnOrder) {
+    const col = getColumnById(colId);
+    if (!col) continue;
+    const th = document.createElement("th");
+    th.setAttribute("draggable", "true");
+    th.dataset.colId = colId;
+
+    const label = document.createElement("div");
+    label.className = "col-label";
+    const text = document.createElement("span");
+    text.textContent = col.label;
+    label.appendChild(text);
+    th.appendChild(label);
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  const frag = document.createDocumentFragment();
+  for (const row of tableRows) {
+    const tr = document.createElement("tr");
+    for (const colId of columnOrder) {
+      const col = getColumnById(colId);
+      if (!col) continue;
+      const td = document.createElement("td");
+      const value = col.get(row);
+      td.textContent = value === null || value === undefined ? "" : String(value);
+      tr.appendChild(td);
+    }
+    frag.appendChild(tr);
+  }
+  tbody.appendChild(frag);
+  table.appendChild(tbody);
+
+  enableColumnDnD();
+}
+
+function enableColumnDnD() {
+  const headers = document.querySelectorAll("#results-table th");
+  headers.forEach(th => {
+    th.addEventListener("dragstart", (e) => {
+      th.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", th.dataset.colId || "");
+    });
+    th.addEventListener("dragend", () => th.classList.remove("dragging"));
+    th.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
+    th.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const fromId = e.dataTransfer.getData("text/plain");
+      const toId = th.dataset.colId;
+      if (!fromId || !toId || fromId === toId) return;
+      const fromIdx = columnOrder.indexOf(fromId);
+      const toIdx = columnOrder.indexOf(toId);
+      if (fromIdx === -1 || toIdx === -1) return;
+      columnOrder.splice(fromIdx, 1);
+      columnOrder.splice(toIdx, 0, fromId);
+      saveColumnOrder();
+      renderTable();
+    });
+  });
+}
+
+function toCSV(rows, order) {
+  const ids = Array.isArray(order) && order.length ? order : COLUMN_DEFS.map(c => c.id);
+  const cols = ids.map(id => getColumnById(id)).filter(Boolean);
+  const header = cols.map(c => c.id);
+  const lines = [header.map(csvEscape).join(",")];
+  for (const r of rows) {
+    const line = cols.map(c => c.get(r)).map(csvEscape).join(",");
+    lines.push(line);
+  }
+  return lines.join("\n");
+}
+
+async function exportReviewIds() {
+  const endpoint = $("#endpoint").value.trim();
+  const token = $("#token").value.trim();
+  const productStatusEl = $("#product-status");
+  const nameFilterEl = $("#course-name-filter");
+  const productStatusRaw = productStatusEl ? productStatusEl.value.trim() : "";
+  const nameFilterRaw = nameFilterEl ? nameFilterEl.value.trim() : "";
+  const productStatus = productStatusRaw ? productStatusRaw : "";
+  const nameFilter = nameFilterRaw ? nameFilterRaw : "";
+  if (!endpoint || !token) { alert("Endpoint and token are required."); return; }
+
+  $("#start").disabled = true;
+  $("#download").disabled = true;
+  $("#reset-columns").disabled = true;
+  $("#log").textContent = "";
+  tableRows = [];
+  renderTable();
+  setStatus("Starting…");
+  $("#bar").classList.add("indeterminate");
+  setBar(0);
+
+  let courseAfter = null;
+  let coursePage = 0;
+  let totalCourses = 0;
+  let totalReviews = 0;
+  const rows = [];
+  const seen = new Set();
+  const coursesQuery = buildCoursesQuery(productStatus, nameFilter);
+  const courseReviewsQuery = buildCourseReviewsQuery(productStatus);
+
+  const addReviews = (courseId, courseName, reviewsConn) => {
+    const nodes = reviewsConn && Array.isArray(reviewsConn.nodes) ? reviewsConn.nodes : [];
+    for (const review of nodes) {
+      const reviewId = review && review.id ? review.id : "";
+      if (!reviewId) continue;
+      const key = courseId + "|" + reviewId;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      rows.push({ courseId, courseName, reviewId });
+      totalReviews += 1;
+    }
+    return nodes.length;
+  };
+
+  try {
+    while (true) {
+      const targetPage = coursePage + 1;
+      setStatus("Fetching courses page " + targetPage + (courseAfter ? " (after=" + courseAfter + ")" : "") + "…");
+      log("Requesting courses page " + targetPage + "…");
+
+      const data = await gqlRetry(endpoint, token, coursesQuery, { after: courseAfter }, "fetching courses");
+      coursePage = targetPage;
+
+      const coursesConn = data && data.site && data.site.courses;
+      if (!coursesConn) throw new Error("Unexpected response shape (site.courses missing).");
+
+      const courseNodes = Array.isArray(coursesConn.nodes) ? coursesConn.nodes : [];
+      log("Received " + courseNodes.length + " courses.");
+
+      setBar(Math.min(70, coursePage * 10));
+
+      for (const course of courseNodes) {
+        const courseId = course && course.id ? course.id : "";
+        const courseName = course && course.name ? course.name : "";
+        totalCourses += 1;
+        log("Processing course: " + (courseName || courseId || "(unknown)") + "…");
+
+        let reviewsConn = course && course.reviews ? course.reviews : null;
+        const firstCount = addReviews(courseId, courseName, reviewsConn);
+        if (firstCount) log("  + " + firstCount + " review IDs (total so far: " + totalReviews + ")");
+
+        let reviewsAfter = reviewsConn && reviewsConn.pageInfo ? reviewsConn.pageInfo.endCursor : null;
+        if (!courseName && reviewsConn && reviewsConn.pageInfo && reviewsConn.pageInfo.hasNextPage) {
+          log("⚠ Course name missing; cannot paginate reviews beyond the first page for this course.");
+        }
+        while (courseName && reviewsConn && reviewsConn.pageInfo && reviewsConn.pageInfo.hasNextPage) {
+          setStatus("Fetching more reviews for " + (courseName || courseId || "(unknown)") + "…");
+          log("Requesting reviews after cursor " + (reviewsAfter || "(start)") + "…");
+
+          const reviewsData = await gqlRetry(
+            endpoint,
+            token,
+            courseReviewsQuery,
+            { courseName, after: reviewsAfter },
+            "fetching reviews for course " + (courseName || courseId || "(unknown)")
+          );
+
+          const candidates = reviewsData && reviewsData.site && reviewsData.site.courses && Array.isArray(reviewsData.site.courses.nodes)
+            ? reviewsData.site.courses.nodes
+            : [];
+
+          const matched = candidates.find(c => c && c.id === courseId) || (candidates.length === 1 ? candidates[0] : null);
+          if (!matched) {
+            log("⚠ Could not uniquely re-fetch course by name to continue review pagination; exported only first " + REVIEWS_PAGE_SIZE + " review IDs for this course.");
+            break;
+          }
+
+          reviewsConn = matched.reviews;
+          const n = addReviews(courseId, courseName, reviewsConn);
+          log("  + " + n + " review IDs (total so far: " + totalReviews + ")");
+          reviewsAfter = reviewsConn && reviewsConn.pageInfo ? reviewsConn.pageInfo.endCursor : null;
+        }
+      }
+
+      if (coursesConn.pageInfo && coursesConn.pageInfo.hasNextPage) {
+        courseAfter = coursesConn.pageInfo.endCursor;
+      } else {
+        break;
+      }
+    }
+
+    if (rows.length === 0) {
+      setStatus("No reviews found.");
+      log("No review IDs detected; nothing to export.");
+      return;
+    }
+
+    tableRows = rows;
+    renderTable();
+    log("Fetching review details for " + rows.length + " review IDs…");
+    const extraKeys = await hydrateReviewDetails(token, tableRows);
+    setExtraColumns(extraKeys);
+    renderTable();
+
+    log("Fetching user details…");
+    await hydrateUserDetails(token, tableRows);
+    renderTable();
+    $("#reset-columns").disabled = false;
+
+    setStatus("Ready ✔  (" + totalReviews + " review IDs; " + totalCourses + " courses)");
+    setBar(100);
+
+    const dlBtn = $("#download");
+    dlBtn.disabled = false;
+    dlBtn.onclick = () => {
+      const outfile = $("#outfile").value.trim() || "thinkific-review-export.csv";
+      const csv = toCSV(tableRows, columnOrder);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = outfile;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+
+    log("Ready. Use Download CSV to export the current results.");
+  } catch (err) {
+    console.error(err);
+    setStatus("Error ⚠ " + err.message);
+    log("Error: " + err.message);
+  } finally {
+    $("#start").disabled = false;
+  }
+}
+
+$("#start").addEventListener("click", exportReviewIds);
+
+const TOKEN_KEY = "thinkific-review-export-token";
+const saved = localStorage.getItem(TOKEN_KEY);
+if (saved) {
+  $("#token").value = saved;
+  log("Loaded saved API key from this device.");
+}
+loadColumnOrder();
+reconcileColumnOrder();
+renderTable();
+$("#save-token").addEventListener("click", () => {
+  const token = $("#token").value.trim();
+  if (!token) { alert("Enter a token before saving."); return; }
+  localStorage.setItem(TOKEN_KEY, token);
+  log("API key saved to this device.");
+});
+
+$("#reset-columns").addEventListener("click", resetColumns);
+
+const resizeBox = $("#table-resize");
+const resizeHandle = $("#table-resize-handle");
+if (resizeBox && resizeHandle) {
+  resizeHandle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = resizeBox.getBoundingClientRect().width;
+    const startHeight = resizeBox.getBoundingClientRect().height;
+
+    const onMove = (ev) => {
+      const nextWidth = Math.max(600, startWidth + (ev.clientX - startX));
+      const nextHeight = Math.max(240, startHeight + (ev.clientY - startY));
+      resizeBox.style.width = Math.round(nextWidth) + "px";
+      resizeBox.style.height = Math.round(nextHeight) + "px";
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+}
+</script>
+</body>
+</html>
